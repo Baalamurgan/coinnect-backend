@@ -1,6 +1,7 @@
 package category
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/Baalamurgan/coin-selling-backend/pkg/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func GetAllCategories(c *fiber.Ctx) error {
@@ -19,16 +21,21 @@ func GetAllCategories(c *fiber.Ctx) error {
 		return views.BadRequest(c)
 	}
 
-	limit, err := strconv.Atoi(c.Query("limit", "10"))
+	limit, err := strconv.Atoi(c.Query("limit", "9999999"))
 	if err != nil || limit < 1 {
 		return views.BadRequest(c)
 	}
 
 	searchQuery := c.Query("search", "")
+	onlyCategories := c.Query("only_categories", "false")
 
 	var categories []models.Category
 	var total int64
-	dbQuery := db.GetDB().Model(&models.Category{}).Preload("Items")
+
+	dbQuery := db.GetDB().Model(&models.Category{})
+	if onlyCategories == "false" {
+		dbQuery = dbQuery.Preload("Items")
+	}
 
 	if searchQuery != "" {
 		dbQuery = dbQuery.Where("name ILIKE ? OR description ILIKE ?", "%"+searchQuery+"%", "%"+searchQuery+"%")
@@ -56,6 +63,9 @@ func GetCategoryByID(c *fiber.Ctx) error {
 	var category models.Category
 	id := c.Params("id")
 	if err := db.GetDB().Where("id = ?", id).First(&category).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
 		return views.InternalServerError(c, err)
 	}
 	return views.StatusOK(c, category)
@@ -125,6 +135,9 @@ func UpdateCategory(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Table("category").Where("id = ?", id).Updates(req).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
 		return views.InternalServerError(c, err)
 	}
 	return views.StatusOK(c, &req)
@@ -133,6 +146,9 @@ func UpdateCategory(c *fiber.Ctx) error {
 func DeleteCategory(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if err := db.GetDB().Table("categories").Where("id = ?", id).Delete(&models.Category{}).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
 		return views.InternalServerError(c, err)
 	}
 	return views.StatusOK(c, "category deleted")

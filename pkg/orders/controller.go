@@ -3,6 +3,8 @@ package orders
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/Baalamurgan/coin-selling-backend/api/db"
 	"github.com/Baalamurgan/coin-selling-backend/api/schemas"
@@ -13,6 +15,66 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+func GetAllOrders(c *fiber.Ctx) error {
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		return views.BadRequest(c)
+	}
+
+	limit, err := strconv.Atoi(c.Query("limit", "10"))
+	if err != nil || limit < 0 {
+		return views.BadRequest(c)
+	}
+
+	searchQuery := c.Query("search", "")
+	categoryIDs := c.Query("category_ids", "")
+
+	var parsedCategoryIDs []*uuid.UUID
+	if categoryIDs != "" {
+		categoryIDs := strings.Split(categoryIDs, "")
+		for _, categoryID := range categoryIDs {
+			parsedCategoryID, err := utils.ParseUUID(categoryID)
+			if err == nil {
+				parsedCategoryIDs = append(parsedCategoryIDs, parsedCategoryID)
+			}
+		}
+	}
+
+	dbQuery := db.GetDB().Model(&models.Orders{})
+
+	var total int64
+	var orders []models.Orders
+
+	if searchQuery != "" {
+		var searchedUser models.User
+		if err := db.GetDB().Model(&models.User{}).Where("username ILIKE ? OR email ILIKE ?", "%"+searchQuery+"%", "%"+searchQuery+"%").First(&searchedUser).Error; err != nil {
+			dbQuery = dbQuery.Where("user_id = ?", searchedUser.ID)
+		}
+	}
+
+	if parsedCategoryIDs != nil {
+		dbQuery = dbQuery.Where("category_id IN ?", parsedCategoryIDs)
+	}
+
+	if err := dbQuery.Count(&total).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	if err := dbQuery.Order("updated_at DESC").Scopes(utils.Paginate(page, limit)).Find(&orders).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	return views.StatusOK(c, fiber.Map{
+		"orders": orders,
+		"pagination": fiber.Map{
+			"page":          page,
+			"limit":         limit,
+			"total_records": total,
+			"total_pages":   utils.CalculateTotalPages(total, limit),
+		},
+	})
+}
 
 func GetOrderByID(c *fiber.Ctx) error {
 	var order models.Orders
@@ -41,6 +103,12 @@ func CreateOrder(c *fiber.Ctx) error {
 		return views.BadRequest(c)
 	}
 
+	orderDBQuery := db.GetDB().Model(&models.Orders{})
+	var existingOrder models.Orders
+	if err := orderDBQuery.Where("user_id = ?", user_id).First(&existingOrder).Error; err != nil {
+		return views.StatusOK(c, existingOrder)
+	}
+
 	var user models.User
 	if err := db.GetDB().Table("users").Where("id = ?", user_id).First(&user).Error; err != nil {
 		return views.BadRequestWithMessage(c, "user does not exist")
@@ -49,7 +117,7 @@ func CreateOrder(c *fiber.Ctx) error {
 	newOrder := models.Orders{
 		UserID: user_id,
 	}
-	if err := db.GetDB().Create(&newOrder).Error; err != nil {
+	if err := orderDBQuery.Create(&newOrder).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
 	return views.ObjectCreated(c, newOrder)
@@ -100,6 +168,9 @@ func AddItemToOrder(c *fiber.Ctx) error {
 func DeleteOrder(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if err := db.GetDB().Where("id = ?", id).Delete(&models.Orders{}).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
 		return views.InternalServerError(c, err)
 	}
 	return views.StatusOK(c, "order deleted")

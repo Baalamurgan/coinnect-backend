@@ -43,12 +43,14 @@ func SetupRoutes(app *fiber.App) {
 	itemGroup.Get("/category/:category_id", item.GetItemsByCategoryID)
 	itemGroup.Get("/sub_category/:sub_category_id", item.GetItemsBySubCategoryID)
 	itemGroup.Get("/:id", item.GetItemByID)
+	itemGroup.Get("/slug/:slug", item.GetItemBySlug)
 	itemGroup.Post("/:category_id", item.CreateItem)
 	itemGroup.Put("/:id", item.UpdateItem)
 	itemGroup.Delete("/:id", item.DeleteItem)
 
 	// Order
 	orderGroup := v1.Group("/order")
+	orderGroup.Get("/", orders.GetAllOrders)
 	orderGroup.Get("/:id", orders.GetOrderByID)
 	orderGroup.Post("/", orders.CreateOrder)
 	orderGroup.Post("/item/add", orders.AddItemToOrder)

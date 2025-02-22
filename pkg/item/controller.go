@@ -1,6 +1,7 @@
 package item
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/Baalamurgan/coin-selling-backend/pkg/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func GetAllItems(c *fiber.Ctx) error {
@@ -21,12 +23,12 @@ func GetAllItems(c *fiber.Ctx) error {
 	}
 
 	limit, err := strconv.Atoi(c.Query("limit", "10"))
-	if err != nil || limit < 1 {
+	if err != nil || limit < 0 {
 		return views.BadRequest(c)
 	}
 
 	searchQuery := c.Query("search", "")
-	categoryIDs := c.Query("category_ids", "") // asdasdasd,asdsadsa,sadsda
+	categoryIDs := c.Query("category_ids", "") // category_id1, category_id2, category_id3
 
 	var parsedCategoryIDs []*uuid.UUID
 	if categoryIDs != "" {
@@ -100,6 +102,22 @@ func GetItemByID(c *fiber.Ctx) error {
 	var item models.Item
 	id := c.Params("id")
 	if err := db.GetDB().Where("id = ?", id).First(&item).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+	return views.StatusOK(c, item)
+}
+
+func GetItemBySlug(c *fiber.Ctx) error {
+	var item models.Item
+	slug := c.Params("slug")
+
+	if err := db.GetDB().Where("slug = ?", slug).First(&item).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
 		return views.InternalServerError(c, err)
 	}
 	return views.StatusOK(c, item)
@@ -157,7 +175,10 @@ func UpdateItem(c *fiber.Ctx) error {
 
 	var item models.Item
 	if err := db.GetDB().Table("items").Where("id = ?", id).First(&item).Error; err != nil {
-		return views.RecordNotFound(c)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
 	}
 
 	item.CategoryID = *req.CategoryID
@@ -181,6 +202,9 @@ func UpdateItem(c *fiber.Ctx) error {
 func DeleteItem(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if err := db.GetDB().Table("items").Where("id = ?", id).Delete(&models.Item{}).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
 		return views.InternalServerError(c, err)
 	}
 	return views.StatusOK(c, "item deleted")
