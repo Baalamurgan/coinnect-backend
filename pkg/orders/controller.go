@@ -133,6 +133,11 @@ func AddItemToOrder(c *fiber.Ctx) error {
 		return views.InvalidParams(c)
 	}
 
+	quantity := req.Quantity
+	if quantity < 1 {
+		return views.BadRequest(c)
+	}
+
 	order_id, err := uuid.Parse(req.OrderID)
 	if err != nil {
 		return views.BadRequest(c)
@@ -148,12 +153,16 @@ func AddItemToOrder(c *fiber.Ctx) error {
 		return err
 	}
 
+	if quantity > item.Stock {
+		return views.BadRequestWithMessage(c, "requested quantity exceeds available stock")
+	}
+
 	orderItem := models.OrderItem{
 		OrderID:            order_id,
 		ItemID:             item_id,
 		BillableAmount:     item.Price,
 		BillableAmountPaid: 0,
-		Quantity:           1,
+		Quantity:           quantity,
 		OrderItemStatus:    "pending",
 	}
 

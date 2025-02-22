@@ -5,6 +5,7 @@ type CreateOrder struct {
 }
 
 type AddItemToOrder struct {
-	OrderID string `gorm:"uuid;" json:"order_id"`
-	ItemID  string `gorm:"uuid;" json:"item_id"`
+	OrderID  string `gorm:"uuid;" json:"order_id"`
+	ItemID   string `gorm:"uuid;" json:"item_id"`
+	Quantity int    `json:"quantity"`
 }
