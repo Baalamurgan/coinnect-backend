@@ -1,7 +1,7 @@
 package schemas
 
 type GetUserRequest struct {
-	Email string `json:"email"`
+	UserID string `json:"user_id"`
 }
 
 type CreateCategoryRequest struct {

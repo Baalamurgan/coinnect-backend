@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Baalamurgan/coin-selling-backend/api/db"
@@ -9,6 +10,8 @@ import (
 	"github.com/Baalamurgan/coin-selling-backend/api/views"
 	"github.com/Baalamurgan/coin-selling-backend/pkg/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func Signup(c *fiber.Ctx) error {
@@ -66,8 +69,17 @@ func GetUser(c *fiber.Ctx) error {
 		fmt.Println(c)
 		return views.InvalidParams(c)
 	}
+
+	user_id, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return views.BadRequest(c)
+	}
+
 	var user *models.User
-	if err := db.GetDB().Model(&models.User{}).Where("email = ?", req.Email).First(&user).Error; err != nil {
+	if err := db.GetDB().Model(&models.User{}).Where("id = ?", user_id).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
 		return views.InternalServerError(c, err)
 	}
 	return views.StatusOK(c, user)

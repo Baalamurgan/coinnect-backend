@@ -92,31 +92,30 @@ func CreateOrder(c *fiber.Ctx) error {
 	var req schemas.CreateOrder
 	if err := c.BodyParser(&req); err != nil {
 		fmt.Println(c)
-		return views.InvalidParams(c)
-	}
-	if err := utils.ValidateStruct(req); len(err) > 0 {
-		return views.InvalidParams(c)
-	}
-
-	user_id, err := uuid.Parse(req.UserID)
-	if err != nil {
-		return views.BadRequest(c)
 	}
 
 	orderDBQuery := db.GetDB().Model(&models.Orders{})
-	var existingOrder models.Orders
-	if err := orderDBQuery.Where("user_id = ?", user_id).First(&existingOrder).Error; err != nil {
-		return views.StatusOK(c, existingOrder)
+	newOrder := models.Orders{}
+
+	if req.UserID != "" {
+		user_id, err := uuid.Parse(req.UserID)
+		if err != nil {
+			return views.BadRequest(c)
+		}
+
+		var user models.User
+		if err := db.GetDB().Table("users").Where("id = ?", user_id).First(&user).Error; err != nil {
+			return views.BadRequestWithMessage(c, "user does not exist")
+		}
+
+		var existingOrder models.Orders
+		if err := orderDBQuery.Where("user_id = ?", user_id).First(&existingOrder).Error; err == nil {
+			return views.StatusOK(c, existingOrder)
+		}
+
+		newOrder.UserID = user_id
 	}
 
-	var user models.User
-	if err := db.GetDB().Table("users").Where("id = ?", user_id).First(&user).Error; err != nil {
-		return views.BadRequestWithMessage(c, "user does not exist")
-	}
-
-	newOrder := models.Orders{
-		UserID: user_id,
-	}
 	if err := orderDBQuery.Create(&newOrder).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
