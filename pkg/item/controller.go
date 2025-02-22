@@ -114,7 +114,7 @@ func GetItemBySlug(c *fiber.Ctx) error {
 	var item models.Item
 	slug := strings.ReplaceAll(c.Params("slug"), "%26", "&")
 
-	if err := db.GetDB().Where("slug = ?", slug).First(&item).Error; err != nil {
+	if err := db.GetDB().Model(&models.Item{}).Preload("Details").Where("slug = ?", slug).First(&item).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return views.RecordNotFound(c)
 		}
