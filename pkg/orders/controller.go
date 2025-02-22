@@ -28,6 +28,7 @@ func GetAllOrders(c *fiber.Ctx) error {
 	}
 
 	searchQuery := c.Query("search", "")
+	status := c.Query("status", "")
 	categoryIDs := c.Query("category_ids", "")
 
 	var parsedCategoryIDs []*uuid.UUID
@@ -51,6 +52,10 @@ func GetAllOrders(c *fiber.Ctx) error {
 		if err := db.GetDB().Model(&models.User{}).Where("username ILIKE ? OR email ILIKE ?", "%"+searchQuery+"%", "%"+searchQuery+"%").First(&searchedUser).Error; err != nil {
 			dbQuery = dbQuery.Where("user_id = ?", searchedUser.ID)
 		}
+	}
+
+	if status != "" {
+		dbQuery = dbQuery.Where("status = ?", status)
 	}
 
 	if parsedCategoryIDs != nil {
@@ -160,6 +165,17 @@ func AddItemToOrder(c *fiber.Ctx) error {
 		return views.BadRequestWithMessage(c, "requested quantity exceeds available stock")
 	}
 
+	var order *models.Orders
+	if err := db.GetDB().
+		Model(&models.Orders{}).
+		Where("id = ?", order_id).First(&order).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	if strings.Compare(order.Status, "pending") != 0 {
+		return views.BadRequestWithMessage(c, "order booked already")
+	}
+
 	itemBillableAmount := item.Price*float64(quantity) + item.Price*float64(quantity)*float64((item.GST/100))
 
 	orderItem := models.OrderItem{
@@ -176,13 +192,6 @@ func AddItemToOrder(c *fiber.Ctx) error {
 	}
 
 	var totalBillableAmount float64
-	if err := db.GetDB().
-		Model(&models.Orders{}).
-		Where("id = ?", order_id).
-		Select("billable_amount").
-		Scan(&totalBillableAmount).Error; err != nil {
-		return views.InternalServerError(c, err)
-	}
 
 	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
 		"billable_amount": totalBillableAmount + itemBillableAmount,
