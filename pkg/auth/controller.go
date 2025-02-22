@@ -97,7 +97,6 @@ func GetAllUsers(c *fiber.Ctx) error {
 
 func UpdateUser(c *fiber.Ctx) error {
 	var req schemas.UpdateUserRequest
-	fmt.Println(c.BodyParser(&req))
 	if err := c.BodyParser(&req); err != nil {
 		fmt.Println(c)
 		return views.InvalidParams(c)
@@ -107,6 +106,13 @@ func UpdateUser(c *fiber.Ctx) error {
 	}
 
 	id := c.Params("id")
+	if err := db.GetDB().Model(&models.User{}).Where("id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+
 	if err := db.GetDB().Model(&models.User{}).Where("id = ?", id).Updates(&req).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return views.RecordNotFound(c)

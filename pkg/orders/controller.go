@@ -203,3 +203,54 @@ func DeleteOrder(c *fiber.Ctx) error {
 	}
 	return views.StatusOK(c, "order deleted")
 }
+
+func ConfirmOrder(c *fiber.Ctx) error {
+	var req schemas.ConfirmOrderRequest
+	if err := c.BodyParser(&req); err != nil {
+		fmt.Println(c)
+		return views.InvalidParams(c)
+	}
+	if err := utils.ValidateStruct(req); len(err) > 0 {
+		return views.InvalidParams(c)
+	}
+
+	id := c.Params("id")
+	user_id := req.UserID
+
+	if user_id != "" {
+		user_id, err := uuid.Parse(req.UserID)
+		if err != nil {
+			return views.BadRequest(c)
+		}
+
+		if err := db.GetDB().Model(&models.User{}).Where("id = ?", user_id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return views.RecordNotFound(c)
+			}
+			return views.InternalServerError(c, err)
+		}
+	}
+
+	dbQuery := db.GetDB().Model(&models.Orders{}).Where("id = ?", id)
+
+	var order *models.Orders
+	if err := db.GetDB().Where("id = ?", id).Preload("OrderItems").First(&order).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+	fmt.Println(order.BillableAmount)
+	fmt.Println(len(order.OrderItems))
+	if order.BillableAmount <= 0 || len(order.OrderItems) <= 0 {
+		return views.BadRequestWithMessage(c, "order invalid")
+	}
+
+	if err := dbQuery.Updates(map[string]interface{}{
+		"status":  "booked",
+		"user_id": user_id,
+	}).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+	return views.StatusOK(c, "order confirmed")
+}
