@@ -15,6 +15,7 @@ type Item struct {
 	Price       float64   `gorm:"not null" json:"price"`
 	GST         float64   `gorm:"not null" json:"gst"`
 	Details     []Detail  `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"details"`
+	Slug        string    `gorm:"not null" json:"slug"`
 	CreatedAt   int       `json:"created_at"`
 	UpdatedAt   int       `json:"updated_at"`
 }
