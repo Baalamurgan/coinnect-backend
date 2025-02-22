@@ -112,7 +112,7 @@ func GetItemByID(c *fiber.Ctx) error {
 
 func GetItemBySlug(c *fiber.Ctx) error {
 	var item models.Item
-	slug := c.Params("slug")
+	slug := strings.ReplaceAll(c.Params("slug"), "%26", "&")
 
 	if err := db.GetDB().Where("slug = ?", slug).First(&item).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
