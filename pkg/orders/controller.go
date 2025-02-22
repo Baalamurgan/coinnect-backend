@@ -160,10 +160,12 @@ func AddItemToOrder(c *fiber.Ctx) error {
 		return views.BadRequestWithMessage(c, "requested quantity exceeds available stock")
 	}
 
+	itemBillableAmount := item.Price*float64(quantity) + item.Price*float64(quantity)*float64((item.GST/100))
+
 	orderItem := models.OrderItem{
 		OrderID:            order_id,
 		ItemID:             item_id,
-		BillableAmount:     item.Price * float64(quantity),
+		BillableAmount:     itemBillableAmount,
 		BillableAmountPaid: 0,
 		Quantity:           quantity,
 		OrderItemStatus:    "pending",
@@ -183,7 +185,7 @@ func AddItemToOrder(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
-		"billable_amount": totalBillableAmount + item.Price*float64(quantity),
+		"billable_amount": totalBillableAmount + itemBillableAmount,
 	}).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
