@@ -150,7 +150,10 @@ func AddItemToOrder(c *fiber.Ctx) error {
 
 	var item models.Item
 	if err := db.GetDB().First(&item, item_id).Error; err != nil {
-		return err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
 	}
 
 	if quantity > item.Stock {
@@ -160,13 +163,28 @@ func AddItemToOrder(c *fiber.Ctx) error {
 	orderItem := models.OrderItem{
 		OrderID:            order_id,
 		ItemID:             item_id,
-		BillableAmount:     item.Price,
+		BillableAmount:     item.Price * float64(quantity),
 		BillableAmountPaid: 0,
 		Quantity:           quantity,
 		OrderItemStatus:    "pending",
 	}
 
 	if err := db.GetDB().Model(&models.OrderItem{}).Create(&orderItem).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	var totalBillableAmount float64
+	if err := db.GetDB().
+		Model(&models.Orders{}).
+		Where("id = ?", order_id).
+		Select("billable_amount").
+		Scan(&totalBillableAmount).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
+		"billable_amount": totalBillableAmount + item.Price*float64(quantity),
+	}).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
 
