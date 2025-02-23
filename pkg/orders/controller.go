@@ -29,7 +29,8 @@ func GetAllOrders(c *fiber.Ctx) error {
 		return views.BadRequest(c)
 	}
 
-	searchQuery := c.Query("search", "")
+	nameQuery := c.Query("name", "")
+	emailQuery := c.Query("email", "")
 	status := c.Query("status", "")
 	categoryIDs := c.Query("category_ids", "")
 
@@ -49,10 +50,25 @@ func GetAllOrders(c *fiber.Ctx) error {
 	var total int64
 	var orders []models.Orders
 
-	if searchQuery != "" {
-		var searchedUser models.User
-		if err := db.GetDB().Model(&models.User{}).Where("username ILIKE ? OR email ILIKE ?", "%"+searchQuery+"%", "%"+searchQuery+"%").First(&searchedUser).Error; err != nil {
-			dbQuery = dbQuery.Where("user_id = ?", searchedUser.ID)
+	if nameQuery != "" {
+		var userIDs []uuid.UUID
+		var searchMatchedUsers []models.User
+		if err := db.GetDB().Model(&models.User{}).Where("username ILIKE ?", "%"+nameQuery+"%").Find(&searchMatchedUsers).Error; err == nil {
+			for _, searchMatchedUser := range searchMatchedUsers {
+				userIDs = append(userIDs, searchMatchedUser.ID)
+			}
+			dbQuery = dbQuery.Where("user_id IN ?", userIDs)
+		}
+	}
+
+	if emailQuery != "" {
+		var userIDs []uuid.UUID
+		var emailMatchedUsers []models.User
+		if err := db.GetDB().Model(&models.User{}).Where("email = ?", emailQuery).Find(&emailMatchedUsers).Error; err == nil {
+			for _, emailMatchedUser := range emailMatchedUsers {
+				userIDs = append(userIDs, emailMatchedUser.ID)
+			}
+			dbQuery = dbQuery.Where("user_id IN ?", userIDs)
 		}
 	}
 
