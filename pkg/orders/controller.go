@@ -57,7 +57,10 @@ func GetAllOrders(c *fiber.Ctx) error {
 	}
 
 	if status != "" {
-		dbQuery = dbQuery.Where("status = ?", status)
+		statuses := strings.Split(status, ",")
+		if len(statuses) > 0 {
+			dbQuery = dbQuery.Where("status IN ?", statuses)
+		}
 	}
 
 	if parsedCategoryIDs != nil {
