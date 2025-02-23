@@ -83,7 +83,11 @@ func GetAllOrders(c *fiber.Ctx) error {
 
 func GetOrderByID(c *fiber.Ctx) error {
 	var order models.Orders
-	id := c.Params("id")
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return views.BadRequest(c)
+	}
+
 	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", id).Preload("OrderItems").First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return views.RecordNotFound(c)
