@@ -191,10 +191,8 @@ func AddItemToOrder(c *fiber.Ctx) error {
 		return views.InternalServerError(c, err)
 	}
 
-	var totalBillableAmount float64
-
 	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
-		"billable_amount": totalBillableAmount + itemBillableAmount,
+		"billable_amount": order.BillableAmount + itemBillableAmount,
 	}).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
