@@ -56,7 +56,7 @@ func Login(c *fiber.Ctx) error {
 		return views.UnAuthorisedViewWithMessage(c, "invalid password")
 	}
 
-	return views.StatusOK(c, "login successful")
+	return views.StatusOK(c, &user)
 }
 
 func GetUser(c *fiber.Ctx) error {
