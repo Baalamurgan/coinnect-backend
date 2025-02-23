@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/Baalamurgan/coin-selling-backend/pkg/auth"
 	"github.com/Baalamurgan/coin-selling-backend/pkg/category"
+	"github.com/Baalamurgan/coin-selling-backend/pkg/data"
 	"github.com/Baalamurgan/coin-selling-backend/pkg/item"
 	"github.com/Baalamurgan/coin-selling-backend/pkg/orders"
 	"github.com/gofiber/fiber/v2"
@@ -11,6 +12,7 @@ import (
 func SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
+	v1.Post("/populate", data.Populate)
 
 	//Auth
 	authGroup := v1.Group("/auth")
