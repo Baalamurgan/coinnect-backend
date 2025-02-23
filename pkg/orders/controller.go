@@ -1,6 +1,7 @@
 package orders
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/Baalamurgan/coin-selling-backend/pkg/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -191,12 +193,26 @@ func AddItemToOrder(c *fiber.Ctx) error {
 		OrderItemStatus:    "pending",
 	}
 
+	metadata, _ := json.Marshal(map[string]interface{}{
+		"name":        item.Name,
+		"category_id": item.CategoryID,
+		"description": item.Description,
+		"year":        item.Year,
+		"sku":         item.SKU,
+		"stock":       item.Stock,
+		"sold":        item.Sold,
+		"image_url":   item.ImageURL,
+		"price":       item.Price,
+		"gst":         item.GST,
+	})
+
 	if err := db.GetDB().Model(&models.OrderItem{}).Create(&orderItem).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
 
 	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
 		"billable_amount": order.BillableAmount + itemBillableAmount,
+		"metadata":        datatypes.JSON(metadata),
 	}).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
