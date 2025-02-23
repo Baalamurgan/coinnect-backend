@@ -2,7 +2,6 @@ package item
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -130,7 +129,6 @@ func CreateItem(c *fiber.Ctx) error {
 	}
 	var req schemas.CreateItemRequest
 	if err := c.BodyParser(&req); err != nil {
-		fmt.Println(c)
 		return views.InvalidParams(c)
 	}
 	if err := utils.ValidateStruct(req); len(err) > 0 {
@@ -201,12 +199,17 @@ func UpdateItem(c *fiber.Ctx) error {
 }
 
 func DeleteItem(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if err := db.GetDB().Table("items").Where("id = ?", id).Delete(&models.Item{}).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return views.RecordNotFound(c)
-		}
-		return views.InternalServerError(c, err)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return views.BadRequest(c)
 	}
+
+	result := db.GetDB().Where("id = ?", id).Delete(&models.Item{})
+	if result.Error != nil {
+		return views.InternalServerError(c, result.Error)
+	} else if result.RowsAffected == 0 {
+		return views.RecordNotFound(c)
+	}
+
 	return views.StatusOK(c, "item deleted")
 }

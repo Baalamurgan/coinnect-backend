@@ -2,7 +2,6 @@ package category
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/Baalamurgan/coin-selling-backend/api/db"
@@ -127,7 +126,6 @@ func UpdateCategory(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var req schemas.CreateCategoryRequest
 	if err := c.BodyParser(&req); err != nil {
-		fmt.Println(c)
 		return views.InvalidParams(c)
 	}
 	if err := utils.ValidateStruct(req); len(err) > 0 {
@@ -144,12 +142,17 @@ func UpdateCategory(c *fiber.Ctx) error {
 }
 
 func DeleteCategory(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if err := db.GetDB().Table("categories").Where("id = ?", id).Delete(&models.Category{}).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return views.RecordNotFound(c)
-		}
-		return views.InternalServerError(c, err)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return views.BadRequest(c)
 	}
+
+	result := db.GetDB().Where("id = ?", id).Delete(&models.Category{})
+	if result.Error != nil {
+		return views.InternalServerError(c, result.Error)
+	} else if result.RowsAffected == 0 {
+		return views.RecordNotFound(c)
+	}
+
 	return views.StatusOK(c, "category deleted")
 }

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/Baalamurgan/coin-selling-backend/api/db"
 	"github.com/Baalamurgan/coin-selling-backend/api/schemas"
@@ -16,9 +15,7 @@ import (
 
 func Signup(c *fiber.Ctx) error {
 	var req schemas.SignupRequest
-	fmt.Println(c.BodyParser(&req))
 	if err := c.BodyParser(&req); err != nil {
-		fmt.Println(c)
 		return views.InvalidParams(c)
 	}
 	if err := utils.ValidateStruct(req); len(err) > 0 {
@@ -47,7 +44,6 @@ func Signup(c *fiber.Ctx) error {
 func Login(c *fiber.Ctx) error {
 	var req schemas.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
-		fmt.Println(c)
 		return views.InvalidParams(c)
 	}
 
@@ -66,7 +62,6 @@ func Login(c *fiber.Ctx) error {
 func GetUser(c *fiber.Ctx) error {
 	var req schemas.GetUserRequest
 	if err := c.BodyParser(&req); err != nil {
-		fmt.Println(c)
 		return views.InvalidParams(c)
 	}
 
@@ -98,7 +93,6 @@ func GetAllUsers(c *fiber.Ctx) error {
 func UpdateUser(c *fiber.Ctx) error {
 	var req schemas.UpdateUserRequest
 	if err := c.BodyParser(&req); err != nil {
-		fmt.Println(c)
 		return views.InvalidParams(c)
 	}
 	if err := utils.ValidateStruct(req); len(err) > 0 {
