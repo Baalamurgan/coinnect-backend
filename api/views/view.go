@@ -10,7 +10,7 @@ func InvalidParams(c *fiber.Ctx) error {
 	return c.
 		Status(400).
 		JSON(fiber.Map{
-			"err": "invalid params",
+			"message": "invalid params",
 		})
 }
 
@@ -19,8 +19,8 @@ func InternalServerError(c *fiber.Ctx, err error) error {
 	return c.
 		Status(500).
 		JSON(fiber.Map{
-			"status": "fail",
-			"err":    "something went wrong",
+			"status":  "fail",
+			"message": "something went wrong",
 		})
 }
 
@@ -47,8 +47,8 @@ func RecordNotFound(c *fiber.Ctx) error {
 	return c.
 		Status(404).
 		JSON(fiber.Map{
-			"status": "fail",
-			"err":    "not found",
+			"status":  "fail",
+			"message": "not found",
 		})
 }
 
@@ -73,16 +73,16 @@ func ForbiddenView(c *fiber.Ctx) error {
 	return c.
 		Status(403).
 		JSON(fiber.Map{
-			"status": "fail",
-			"err":    "forbidden",
+			"status":  "fail",
+			"message": "forbidden",
 		})
 }
 
 func BadRequest(c *fiber.Ctx) error {
 	return c.
 		Status(400).JSON(fiber.Map{
-		"status": "fail",
-		"err":    "bad request",
+		"status":  "fail",
+		"message": "bad request",
 	})
 }
 
@@ -96,15 +96,15 @@ func BadRequestWithMessage(c *fiber.Ctx, message string) error {
 func Conflict(c *fiber.Ctx) error {
 	return c.
 		Status(409).JSON(fiber.Map{
-		"status": "fail",
-		"err":    "conflict",
+		"status":  "fail",
+		"message": "conflict",
 	})
 }
 
 func ConflictWithMessage(c *fiber.Ctx, message string) error {
 	return c.
 		Status(409).JSON(fiber.Map{
-		"status": "fail",
-		"err":    message,
+		"status":  "fail",
+		"message": message,
 	})
 }

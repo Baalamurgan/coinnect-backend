@@ -184,15 +184,6 @@ func AddItemToOrder(c *fiber.Ctx) error {
 
 	itemBillableAmount := item.Price*float64(quantity) + item.Price*float64(quantity)*float64((item.GST/100))
 
-	orderItem := models.OrderItem{
-		OrderID:            order_id,
-		ItemID:             item_id,
-		BillableAmount:     itemBillableAmount,
-		BillableAmountPaid: 0,
-		Quantity:           quantity,
-		OrderItemStatus:    "pending",
-	}
-
 	metadata, _ := json.Marshal(map[string]interface{}{
 		"name":        item.Name,
 		"category_id": item.CategoryID,
@@ -206,13 +197,22 @@ func AddItemToOrder(c *fiber.Ctx) error {
 		"gst":         item.GST,
 	})
 
+	orderItem := models.OrderItem{
+		OrderID:            order_id,
+		ItemID:             item_id,
+		BillableAmount:     itemBillableAmount,
+		BillableAmountPaid: 0,
+		Quantity:           quantity,
+		OrderItemStatus:    "pending",
+		MetaData:           datatypes.JSON(metadata),
+	}
+
 	if err := db.GetDB().Model(&models.OrderItem{}).Create(&orderItem).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
 
 	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
 		"billable_amount": order.BillableAmount + itemBillableAmount,
-		"metadata":        datatypes.JSON(metadata),
 	}).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
