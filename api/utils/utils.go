@@ -6,6 +6,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Baalamurgan/coin-selling-backend/api/constants"
 	"github.com/go-playground/validator/v10"
@@ -108,4 +109,13 @@ func Paginate(page, limit int) func(db *gorm.DB) *gorm.DB {
 		offset := (page - 1) * limit
 		return db.Offset(offset).Limit(limit)
 	}
+}
+
+func GenerateSlug(name string) string {
+	name = strings.ToLower(name)
+	name = strings.ReplaceAll(name, "%26", "&")
+	words := strings.Fields(name)
+	slug := strings.Join(words, "-")
+
+	return slug
 }

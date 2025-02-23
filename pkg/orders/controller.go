@@ -185,16 +185,17 @@ func AddItemToOrder(c *fiber.Ctx) error {
 	itemBillableAmount := item.Price*float64(quantity) + item.Price*float64(quantity)*float64((item.GST/100))
 
 	metadata, _ := json.Marshal(map[string]interface{}{
-		"name":        item.Name,
 		"category_id": item.CategoryID,
+		"name":        item.Name,
 		"description": item.Description,
 		"year":        item.Year,
 		"sku":         item.SKU,
+		"image_url":   item.ImageURL,
 		"stock":       item.Stock,
 		"sold":        item.Sold,
-		"image_url":   item.ImageURL,
 		"price":       item.Price,
 		"gst":         item.GST,
+		"details":     item.Details,
 	})
 
 	orderItem := models.OrderItem{
