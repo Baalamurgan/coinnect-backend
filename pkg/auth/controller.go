@@ -80,6 +80,22 @@ func GetUser(c *fiber.Ctx) error {
 	return views.StatusOK(c, user)
 }
 
+func GetUserByEmail(c *fiber.Ctx) error {
+	var req schemas.GetUserByEmailRequest
+	if err := c.BodyParser(&req); err != nil {
+		return views.InvalidParams(c)
+	}
+
+	var user *models.User
+	if err := db.GetDB().Model(&models.User{}).Where("email = ?", req.Email).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+	return views.StatusOK(c, user)
+}
+
 func GetAllUsers(c *fiber.Ctx) error {
 	var users []models.User
 

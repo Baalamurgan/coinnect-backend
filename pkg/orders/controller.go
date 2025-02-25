@@ -138,10 +138,11 @@ func CreateOrder(c *fiber.Ctx) error {
 			return views.BadRequestWithMessage(c, "user does not exist")
 		}
 
-		var existingOrder models.Orders
-		if err := orderDBQuery.Where("user_id = ?", user_id).First(&existingOrder).Error; err == nil {
-			return views.StatusOK(c, existingOrder)
-		}
+		// EXPLAIN: commented since when admin confirms an order, user side fetch still gives old order_id
+		// var existingOrder models.Orders
+		// if err := orderDBQuery.Where("user_id = ?", user_id).First(&existingOrder).Error; err == nil {
+		// 	return views.StatusOK(c, existingOrder)
+		// }
 
 		newOrder.UserID = user_id
 	}
@@ -179,20 +180,16 @@ func ConfirmOrder(c *fiber.Ctx) error {
 	}
 
 	id := c.Params("id")
-	user_id := req.UserID
+	user_id, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return views.BadRequest(c)
+	}
 
-	if user_id != "" {
-		user_id, err := uuid.Parse(req.UserID)
-		if err != nil {
-			return views.BadRequest(c)
+	if err := db.GetDB().Model(&models.User{}).Where("id = ?", user_id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
 		}
-
-		if err := db.GetDB().Model(&models.User{}).Where("id = ?", user_id).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return views.RecordNotFound(c)
-			}
-			return views.InternalServerError(c, err)
-		}
+		return views.InternalServerError(c, err)
 	}
 
 	dbQuery := db.GetDB().Model(&models.Orders{}).Where("id = ?", id)
@@ -202,7 +199,7 @@ func ConfirmOrder(c *fiber.Ctx) error {
 		return views.InternalServerError(c, err)
 	}
 
-	if order.BillableAmount <= 0 || len(order.OrderItems) <= 0 {
+	if len(order.OrderItems) <= 0 {
 		return views.BadRequestWithMessage(c, "order invalid")
 	}
 

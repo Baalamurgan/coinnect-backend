@@ -4,6 +4,10 @@ type GetUserRequest struct {
 	UserID string `json:"user_id"`
 }
 
+type GetUserByEmailRequest struct {
+	Email string `json:"email"`
+}
+
 type CreateCategoryRequest struct {
 	Name             string `gorm:"not null" json:"name"`
 	Description      string `json:"description"`
