@@ -59,8 +59,9 @@ func SetupRoutes(app *fiber.App) {
 	orderGroup.Get("/", orders.GetAllOrders)
 	orderGroup.Get("/:id", orders.GetOrderByID)
 	orderGroup.Post("/", orders.CreateOrder)
-	orderGroup.Post("/:id/confirm", orders.ConfirmOrder)
 	orderGroup.Delete("/:id", orders.DeleteOrder)
+	orderGroup.Post("/:id/confirm", orders.ConfirmOrder)
+	orderGroup.Patch("/:id/pay", orders.MarkOrderAsPaid)
 	// Order Item
 	orderItemGroup := orderGroup.Group("/item")
 	orderItemGroup.Post("/add", orders.AddItemToOrder)
