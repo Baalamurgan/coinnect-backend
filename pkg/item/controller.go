@@ -135,7 +135,7 @@ func CreateItem(c *fiber.Ctx) error {
 		return views.InvalidParams(c)
 	}
 
-	newItem := new(models.Item)
+	var newItem models.Item
 	newItem.CategoryID = category_id
 	newItem.Name = req.Name
 	newItem.Description = req.Description

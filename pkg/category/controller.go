@@ -132,12 +132,13 @@ func UpdateCategory(c *fiber.Ctx) error {
 		return views.InvalidParams(c)
 	}
 
-	if err := db.GetDB().Table("category").Where("id = ?", id).Updates(req).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return views.RecordNotFound(c)
-		}
-		return views.InternalServerError(c, err)
+	result := db.GetDB().Table("category").Where("id = ?", id).Updates(req)
+	if result.Error != nil {
+		return views.InternalServerError(c, result.Error)
+	} else if result.RowsAffected == 0 {
+		return views.RecordNotFound(c)
 	}
+
 	return views.StatusOK(c, &req)
 }
 

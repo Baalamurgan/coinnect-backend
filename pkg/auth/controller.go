@@ -123,11 +123,11 @@ func UpdateUser(c *fiber.Ctx) error {
 		return views.InternalServerError(c, err)
 	}
 
-	if err := db.GetDB().Model(&models.User{}).Where("id = ?", id).Updates(&req).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return views.RecordNotFound(c)
-		}
-		return views.InternalServerError(c, err)
+	result := db.GetDB().Model(&models.User{}).Where("id = ?", id).Updates(&req)
+	if result.Error != nil {
+		return views.InternalServerError(c, result.Error)
+	} else if result.RowsAffected == 0 {
+		return views.RecordNotFound(c)
 	}
 
 	return views.StatusOK(c, "user updated successfully")

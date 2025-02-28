@@ -13,6 +13,18 @@ type MarkOrderAsPaidRequest struct {
 	BillableAmountPaid float64 `json:"billable_amount_paid" validate:"required"`
 }
 
+type MarkOrderAsShippedRequest struct {
+	UserID       string `gorm:"uuid;" json:"user_id" validate:"required"`
+	ShippingName string `json:"shipping_name" validate:"required"`
+	ShippingID   string `json:"shipping_id"`
+	ShippingDate int    `json:"shipping_date"`
+}
+
+type CancelOrderRequest struct {
+	UserID             string `gorm:"uuid;" json:"user_id" validate:"required"`
+	CancellationReason string `json:"cancellation_reason" validate:"required"`
+}
+
 type AddItemToOrder struct {
 	OrderID  string `gorm:"uuid;" json:"order_id"`
 	ItemID   string `gorm:"uuid;" json:"item_id"`

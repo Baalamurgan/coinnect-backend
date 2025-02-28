@@ -15,5 +15,6 @@ func Migrate() {
 		&models.Detail{},
 		&models.Orders{},
 		&models.OrderItem{},
+		&models.ShippingDetails{},
 	)
 }
