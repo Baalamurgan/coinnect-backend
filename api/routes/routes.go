@@ -34,15 +34,6 @@ func SetupRoutes(app *fiber.App) {
 	categoryGroup.Put("/:id", category.UpdateCategory)
 	categoryGroup.Delete("/:id", category.DeleteCategory)
 
-	// Sub Category
-	// subCategoryGroup := v1.Group("/sub_category")
-	// subCategoryGroup.Get("/", sub_category.GetAllSubCategories)
-	// subCategoryGroup.Get("/category/:category_id", sub_category.GetAllSubCategoriesByCategoryID)
-	// subCategoryGroup.Get("/:id", sub_category.GetSubCategoryByID)
-	// subCategoryGroup.Post("/:category_id", sub_category.CreateSubCategory)
-	// subCategoryGroup.Put("/:id", sub_category.UpdateSubCategory)
-	// subCategoryGroup.Delete("/:id", sub_category.DeleteSubCategory)
-
 	// Item
 	itemGroup := v1.Group("/item")
 	itemGroup.Get("/", item.GetAllItems)
@@ -64,13 +55,10 @@ func SetupRoutes(app *fiber.App) {
 	orderGroup.Patch("/:id/cancel", orders.CancelOrder)
 	orderGroup.Patch("/:id/pay", orders.MarkOrderAsPaid)
 	orderGroup.Patch("/:id/ship", orders.MarkOrderAsShipped)
-	// orderGroup.Patch("/:id/deliver", orders.MarkOrderAsDelivered)
-	// orderGroup.Patch("/:id/cancel", orders.CancelOrder)
-	// orderGroup.Patch("/:id/restore", orders.RestoreOrder)
+	orderGroup.Patch("/:id/deliver", orders.MarkOrderAsDelivered)
+	orderGroup.Patch("/:id/restore", orders.RestoreOrder)
 	// Order Item
 	orderItemGroup := orderGroup.Group("/item")
 	orderItemGroup.Post("/add", orders.AddItemToOrder)
 	orderItemGroup.Delete("/:order_id/:order_item_id", orders.DeleteOrderItemFromOrder)
-
-	// coinGroup := itemGroup.Group("/coin")
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Baalamurgan/coin-selling-backend/api/db"
 	"github.com/Baalamurgan/coin-selling-backend/api/schemas"
@@ -349,8 +350,9 @@ func ConfirmOrder(c *fiber.Ctx) error {
 	}
 
 	result := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
-		"status":  "booked",
-		"user_id": user_id,
+		"status":      "booked",
+		"user_id":     user_id,
+		"status_date": time.Now().Unix(),
 	})
 	if result.Error != nil {
 		return views.InternalServerError(c, result.Error)
@@ -410,6 +412,7 @@ func MarkOrderAsPaid(c *fiber.Ctx) error {
 	result := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
 		"status":               "paid",
 		"billable_amount_paid": req.BillableAmountPaid,
+		"status_date":          time.Now().Unix(),
 	})
 	if result.Error != nil {
 		return views.InternalServerError(c, result.Error)
@@ -417,7 +420,7 @@ func MarkOrderAsPaid(c *fiber.Ctx) error {
 		return views.RecordNotFound(c)
 	}
 
-	return views.StatusOK(c, "order paid successfully")
+	return views.StatusOK(c, "order paid")
 }
 
 func MarkOrderAsShipped(c *fiber.Ctx) error {
@@ -458,8 +461,8 @@ func MarkOrderAsShipped(c *fiber.Ctx) error {
 		return views.BadRequestWithMessage(c, "order has already been cancelled")
 	}
 
-	if strings.Compare(order.Status, "paid") == 0 {
-		return views.BadRequestWithMessage(c, "order must be paid before shipping")
+	if strings.Compare(order.Status, "paid") != 0 {
+		return views.BadRequestWithMessage(c, "order has not been paid yet")
 	}
 
 	var shippingDetails models.ShippingDetails
@@ -473,11 +476,10 @@ func MarkOrderAsShipped(c *fiber.Ctx) error {
 		return views.InternalServerError(c, err)
 	}
 
-	fmt.Println(shippingDetails)
-
 	result := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
 		"status":      "shipped",
 		"shipping_id": shippingDetails.ID,
+		"status_date": time.Now().Unix(),
 	})
 	if result.Error != nil {
 		return views.InternalServerError(c, result.Error)
@@ -485,7 +487,7 @@ func MarkOrderAsShipped(c *fiber.Ctx) error {
 		return views.RecordNotFound(c)
 	}
 
-	return views.StatusOK(c, "order shipped successfully")
+	return views.StatusOK(c, "order shipped")
 }
 
 func CancelOrder(c *fiber.Ctx) error {
@@ -533,6 +535,7 @@ func CancelOrder(c *fiber.Ctx) error {
 	result := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
 		"status":              "cancelled",
 		"cancellation_reason": req.CancellationReason,
+		"status_date":         time.Now().Unix(),
 	})
 	if result.Error != nil {
 		return views.InternalServerError(c, result.Error)
@@ -540,5 +543,123 @@ func CancelOrder(c *fiber.Ctx) error {
 		return views.RecordNotFound(c)
 	}
 
-	return views.StatusOK(c, "order cancelled successfully")
+	return views.StatusOK(c, "order cancelled")
+}
+
+func MarkOrderAsDelivered(c *fiber.Ctx) error {
+	var req schemas.MarkOrderAsDeliveredRequest
+	if err := c.BodyParser(&req); err != nil {
+		return views.InvalidParams(c)
+	}
+	if err := utils.ValidateStruct(req); len(err) > 0 {
+		return views.InvalidParams(c)
+	}
+
+	order_id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return views.BadRequest(c)
+	}
+
+	user_id, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return views.BadRequest(c)
+	}
+
+	if err := db.GetDB().Where("id = ?", user_id).First(&models.User{}).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+
+	var order models.Orders
+	if err := db.GetDB().Where("id = ?", order_id).First(&order).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+
+	if strings.Compare(order.Status, "cancelled") == 0 {
+		return views.BadRequestWithMessage(c, "order has already been cancelled")
+	}
+
+	if strings.Compare(order.Status, "shipped") != 0 {
+		return views.BadRequestWithMessage(c, "order has not been shipped yet")
+	}
+
+	var deliveryDetails models.DeliveryDetails
+	deliveryDetails.OrderID = order_id
+	deliveryDetails.UserID = user_id
+	deliveryDetails.DeliveryPersonName = req.DeliveryPersonName
+	deliveryDetails.DeliveryID = req.DeliveryID
+	deliveryDetails.DeliveryDate = req.DeliveryDate
+
+	if err := db.GetDB().Create(&deliveryDetails).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	result := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
+		"status":      "delivered",
+		"delivery_id": deliveryDetails.ID,
+		"status_date": time.Now().Unix(),
+	})
+	if result.Error != nil {
+		return views.InternalServerError(c, result.Error)
+	} else if result.RowsAffected == 0 {
+		return views.RecordNotFound(c)
+	}
+
+	return views.StatusOK(c, "order delivered")
+}
+
+func RestoreOrder(c *fiber.Ctx) error {
+	var req schemas.RestoreOrderRequest
+	if err := c.BodyParser(&req); err != nil {
+		return views.InvalidParams(c)
+	}
+	if err := utils.ValidateStruct(req); len(err) > 0 {
+		return views.InvalidParams(c)
+	}
+
+	order_id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return views.BadRequest(c)
+	}
+
+	user_id, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return views.BadRequest(c)
+	}
+
+	if err := db.GetDB().Where("id = ?", user_id).First(&models.User{}).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+
+	var order models.Orders
+	if err := db.GetDB().Where("id = ?", order_id).First(&order).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+
+	if strings.Compare(order.Status, "cancelled") != 0 {
+		return views.BadRequestWithMessage(c, "order is not cancelled")
+	}
+
+	result := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
+		"status":      "pending",
+		"status_date": time.Now().Unix(),
+	})
+	if result.Error != nil {
+		return views.InternalServerError(c, result.Error)
+	} else if result.RowsAffected == 0 {
+		return views.RecordNotFound(c)
+	}
+
+	return views.StatusOK(c, "order restored")
 }

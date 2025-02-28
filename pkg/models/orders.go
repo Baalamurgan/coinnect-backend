@@ -9,7 +9,9 @@ type Orders struct {
 	BillableAmount     float64     `gorm:"type:decimal(10,2);default:0.0" json:"billable_amount"`
 	BillableAmountPaid float64     `gorm:"type:decimal(10,2);default:0.0" json:"billable_amount_paid"`
 	ShippingID         uuid.UUID   `gorm:"type:uuid" json:"shipping_id"`
+	DeliveryID         uuid.UUID   `gorm:"type:uuid" json:"delivery_id"`
 	Status             string      `gorm:"type:varchar(20);default:'pending'" json:"status"` //  pending, booked, paid, shipped, delivered, cancelled
+	StatusDate         int         `json:"status_date"`
 	CancellationReason string      `gorm:"type:text" json:"cancellation_reason"`
 	CreatedAt          int         `json:"created_at"`
 	UpdatedAt          int         `json:"updated_at"`
