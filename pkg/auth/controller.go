@@ -29,9 +29,15 @@ func Signup(c *fiber.Ctx) error {
 	}
 
 	newUser := models.User{
-		Email:    req.Email,
-		Password: req.Password,
-		Username: req.Username,
+		Email:        req.Email,
+		Password:     req.Password,
+		Username:     req.Username,
+		Phone:        req.Phone,
+		AddressLine1: req.AddressLine1,
+		AddressLine2: req.AddressLine2,
+		AddressLine3: req.AddressLine3,
+		State:        req.State,
+		Pin:          req.Pin,
 	}
 
 	if err := db.GetDB().Model(&models.User{}).Create(&newUser).Error; err != nil {
