@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -256,6 +257,16 @@ func AddItemToOrder(c *fiber.Ctx) error {
 		return views.RecordNotFound(c)
 	}
 
+	itemResult := db.GetDB().Model(&models.Item{}).Where("id = ?", item.ID).Updates(map[string]interface{}{
+		"sold":  gorm.Expr("sold + ?", orderItem.Quantity),
+		"stock": gorm.Expr("stock - ?", orderItem.Quantity),
+	})
+	if itemResult.Error != nil {
+		log.Println(itemResult.Error)
+	} else if itemResult.RowsAffected == 0 {
+		log.Println("Stock update failed for item:", orderItem.ItemID)
+	}
+
 	return views.StatusOK(c, orderItem)
 }
 
@@ -283,8 +294,8 @@ func DeleteOrderItemFromOrder(c *fiber.Ctx) error {
 		return views.BadRequestWithMessage(c, "order confirmed already")
 	}
 
-	var item models.OrderItem
-	if err := db.GetDB().Model(&models.OrderItem{}).First(&item, order_item_id).Error; err != nil {
+	var orderItem models.OrderItem
+	if err := db.GetDB().Model(&models.OrderItem{}).First(&orderItem, order_item_id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return views.RecordNotFound(c)
 		}
@@ -292,7 +303,7 @@ func DeleteOrderItemFromOrder(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", order_id).Updates(map[string]interface{}{
-		"billable_amount": order.BillableAmount - item.BillableAmount,
+		"billable_amount": order.BillableAmount - orderItem.BillableAmount,
 	}).Error; err != nil {
 		return views.InternalServerError(c, err)
 	}
@@ -302,6 +313,16 @@ func DeleteOrderItemFromOrder(c *fiber.Ctx) error {
 		return views.InternalServerError(c, result.Error)
 	} else if result.RowsAffected == 0 {
 		return views.RecordNotFound(c)
+	}
+
+	itemResult := db.GetDB().Model(&models.Item{}).Where("id = ?", orderItem.ItemID).Updates(map[string]interface{}{
+		"sold":  gorm.Expr("sold - ?", orderItem.Quantity),
+		"stock": gorm.Expr("stock + ?", orderItem.Quantity),
+	})
+	if itemResult.Error != nil {
+		log.Println(itemResult.Error)
+	} else if itemResult.RowsAffected == 0 {
+		log.Println("Stock update failed for item:", orderItem.ItemID)
 	}
 
 	return views.StatusOK(c, "order item deleted")

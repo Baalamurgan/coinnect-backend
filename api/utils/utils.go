@@ -114,6 +114,7 @@ func Paginate(page, limit int) func(db *gorm.DB) *gorm.DB {
 func GenerateSlug(name string) string {
 	name = strings.ToLower(name)
 	name = strings.ReplaceAll(name, "%26", "&")
+	name = strings.ReplaceAll(name, "–", "-")
 	words := strings.Fields(name)
 	slug := strings.Join(words, "-")
 
