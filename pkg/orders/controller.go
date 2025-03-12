@@ -270,6 +270,68 @@ func AddItemToOrder(c *fiber.Ctx) error {
 	return views.StatusOK(c, orderItem)
 }
 
+func UpdateOrderItemQuantity(c *fiber.Ctx) error {
+	var req schemas.UpdateOrderItemQuantity
+	if err := c.BodyParser(&req); err != nil {
+		return views.InvalidParams(c)
+	}
+	if err := utils.ValidateStruct(req); len(err) > 0 {
+		return views.InvalidParams(c)
+	}
+
+	order_item_id, err := uuid.Parse(req.OrderItemID)
+	if err != nil {
+		return views.BadRequest(c)
+	}
+
+	newQuantity := req.Quantity
+	if newQuantity < 1 {
+		return views.BadRequestWithMessage(c, "quantity must be at least 1")
+	}
+
+	var orderItem models.OrderItem
+	if err := db.GetDB().First(&orderItem, order_item_id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return views.RecordNotFound(c)
+		}
+		return views.InternalServerError(c, err)
+	}
+
+	var item models.Item
+	if err := db.GetDB().First(&item, orderItem.ItemID).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	availableStock := item.Stock + orderItem.Quantity
+	if newQuantity > availableStock {
+		return views.BadRequestWithMessage(c, "requested quantity exceeds available stock")
+	}
+
+	newBillableAmount := item.Price*float64(newQuantity) + item.Price*float64(newQuantity)*float64((item.GST/100))
+	diffBillableAmount := newBillableAmount - orderItem.BillableAmount
+	diff := newQuantity - orderItem.Quantity
+
+	if err := db.GetDB().Model(&orderItem).Updates(map[string]interface{}{
+		"quantity":        newQuantity,
+		"billable_amount": newBillableAmount,
+	}).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	if err := db.GetDB().Model(&models.Orders{}).Where("id = ?", orderItem.OrderID).Update("billable_amount", gorm.Expr("billable_amount + ?", diffBillableAmount)).Error; err != nil {
+		return views.InternalServerError(c, err)
+	}
+
+	if err := db.GetDB().Model(&models.Item{}).Where("id = ?", item.ID).Updates(map[string]interface{}{
+		"stock": gorm.Expr("stock - ?", diff),
+		"sold":  gorm.Expr("sold + ?", diff),
+	}).Error; err != nil {
+		log.Println(err)
+	}
+
+	return views.StatusOK(c, orderItem)
+}
+
 func EditOrder(c *fiber.Ctx) error {
 	var req schemas.EditOrder
 	if err := c.BodyParser(&req); err != nil {
@@ -322,29 +384,23 @@ func EditOrder(c *fiber.Ctx) error {
 
 			diff := *item.Quantity - orderItem.Quantity
 
-			if diff > 0 {
-				if product.Stock < diff {
-					tx.Rollback()
-					return views.BadRequestWithMessage(c, "not enough stock available")
-				}
-				tx.Model(&models.Item{}).Where("id = ?", product.ID).
-					Updates(map[string]interface{}{
-						"sold":  gorm.Expr("sold + ?", diff),
-						"stock": gorm.Expr("stock - ?", diff),
-					})
-			} else if diff < 0 {
-				tx.Model(&models.Item{}).Where("id = ?", product.ID).
-					Updates(map[string]interface{}{
-						"sold":  gorm.Expr("sold - ?", diff),
-						"stock": gorm.Expr("stock + ?", diff),
-					})
+			if product.Stock < diff {
+				tx.Rollback()
+				return views.BadRequestWithMessage(c, "not enough stock available")
 			}
+
+			tx.Model(&models.Item{}).Where("id = ?", product.ID).
+				Updates(map[string]interface{}{
+					"sold":  gorm.Expr("sold + ?", diff),
+					"stock": gorm.Expr("stock - ?", diff),
+				})
 
 			updateData["quantity"] = *item.Quantity
 		}
 
 		if item.PricePerItem != nil {
-			updateData["billable_amount"] = *item.PricePerItem * float64(orderItem.Quantity) * (1 + (product.GST / 100))
+			newBillableAmount := *item.PricePerItem * float64(*item.Quantity)
+			updateData["billable_amount"] = newBillableAmount * (1 + (product.GST / 100))
 		}
 
 		if len(updateData) > 0 {

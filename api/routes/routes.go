@@ -62,4 +62,5 @@ func SetupRoutes(app *fiber.App) {
 	orderItemGroup := orderGroup.Group("/item")
 	orderItemGroup.Post("/add", orders.AddItemToOrder)
 	orderItemGroup.Delete("/:order_id/:order_item_id", orders.DeleteOrderItemFromOrder)
+	orderItemGroup.Patch("/update-quantity", orders.UpdateOrderItemQuantity)
 }

@@ -42,9 +42,14 @@ type AddItemToOrder struct {
 	Quantity int    `json:"quantity"`
 }
 
+type UpdateOrderItemQuantity struct {
+	OrderItemID string `gorm:"uuid" json:"order_item_id" validate:"required"`
+	Quantity    int    `json:"quantity" validate:"required"`
+}
+
 type EditOrder struct {
 	OrderItems []struct {
-		OrderItemID  string   `json:"order_item_id"`
+		OrderItemID  string   `gorm:"uuid" json:"order_item_id"`
 		Quantity     *int     `json:"quantity"`
 		PricePerItem *float64 `json:"price_per_item"`
 	} `json:"order_items"`
