@@ -9,10 +9,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
       - name: Deploy to Railway
-        run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          RAILWAY_TOKEN=${{ secrets.RAILWAY_API_TOKEN }} railway up
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: railway up
