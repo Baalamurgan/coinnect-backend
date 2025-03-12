@@ -22,7 +22,7 @@ jobs:
         run: curl -fsSL https://railway.app/install.sh | sh
 
       - name: Authenticate Railway Token
-        run: echo $RAILWAY_TOKEN | railway auth"
+        run: echo $RAILWAY_TOKEN | railway auth
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
