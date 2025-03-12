@@ -5,7 +5,6 @@ var ENV = []string{
 	"DB_PASSWORD",
 	"DB_NAME",
 	"DB_PORT",
-	"REDIS_URL",
 	"ENVIRONMENT",
 	"MIGRATE",
 }

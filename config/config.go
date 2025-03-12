@@ -11,7 +11,6 @@ var (
 	PORT            = ""
 	MIGRATE         = false
 	DB_URI          = ""
-	REDIS_URL       = ""
 	REDIS_DB_NUMBER = ""
 )
 
@@ -19,7 +18,6 @@ func LoadConfig() {
 	ENVIRONMENT = viper.GetString("ENVIRONMENT")
 	PORT = viper.GetString("PORT")
 	MIGRATE = viper.GetBool("MIGRATE")
-	REDIS_URL = viper.GetString("REDIS_URL")
 	REDIS_DB_NUMBER = viper.GetString("REDIS_DB_NUMBER")
 	dbHost := viper.GetString("DB_HOST")
 	dbPort := viper.GetString("DB_PORT")
