@@ -270,6 +270,107 @@ func AddItemToOrder(c *fiber.Ctx) error {
 	return views.StatusOK(c, orderItem)
 }
 
+func EditOrder(c *fiber.Ctx) error {
+	var req schemas.EditOrder
+	if err := c.BodyParser(&req); err != nil {
+		return views.InvalidParams(c)
+	}
+
+	order_id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return views.BadRequest(c)
+	}
+
+	var order models.Orders
+	if err := db.GetDB().First(&order, order_id).Error; err != nil {
+		return views.RecordNotFound(c)
+	}
+
+	if order.Status != "pending" && order.Status != "booked" {
+		return views.BadRequestWithMessage(c, "Cannot edit a paid order")
+	}
+
+	tx := db.GetDB().Begin()
+
+	var totalBillableAmount float64 = 0
+
+	for _, item := range req.OrderItems {
+		order_item_id, err := uuid.Parse(item.OrderItemID)
+		if err != nil {
+			return views.BadRequest(c)
+		}
+
+		var orderItem models.OrderItem
+		if err := tx.First(&orderItem, order_item_id).Error; err != nil {
+			tx.Rollback()
+			return views.RecordNotFound(c)
+		}
+
+		var product models.Item
+		if err := tx.First(&product, orderItem.ItemID).Error; err != nil {
+			tx.Rollback()
+			return views.RecordNotFound(c)
+		}
+
+		updateData := map[string]interface{}{}
+
+		if item.Quantity != nil {
+			if *item.Quantity < 1 {
+				tx.Rollback()
+				return views.BadRequestWithMessage(c, "quantity cannot be less than 1")
+			}
+
+			diff := *item.Quantity - orderItem.Quantity
+
+			if diff > 0 {
+				if product.Stock < diff {
+					tx.Rollback()
+					return views.BadRequestWithMessage(c, "not enough stock available")
+				}
+				tx.Model(&models.Item{}).Where("id = ?", product.ID).
+					Updates(map[string]interface{}{
+						"sold":  gorm.Expr("sold + ?", diff),
+						"stock": gorm.Expr("stock - ?", diff),
+					})
+			} else if diff < 0 {
+				tx.Model(&models.Item{}).Where("id = ?", product.ID).
+					Updates(map[string]interface{}{
+						"sold":  gorm.Expr("sold - ?", diff),
+						"stock": gorm.Expr("stock + ?", diff),
+					})
+			}
+
+			updateData["quantity"] = *item.Quantity
+		}
+
+		if item.PricePerItem != nil {
+			updateData["billable_amount"] = *item.PricePerItem * float64(orderItem.Quantity) * (1 + (product.GST / 100))
+		}
+
+		if len(updateData) > 0 {
+			if err := tx.Model(&models.OrderItem{}).
+				Where("id = ?", orderItem.ID).
+				Updates(updateData).Error; err != nil {
+				tx.Rollback()
+				return views.InternalServerError(c, err)
+			}
+		}
+
+		totalBillableAmount += orderItem.BillableAmount
+	}
+
+	if err := tx.Model(&models.Orders{}).
+		Where("id = ?", order_id).
+		Update("billable_amount", totalBillableAmount).Error; err != nil {
+		tx.Rollback()
+		return views.InternalServerError(c, err)
+	}
+
+	tx.Commit()
+
+	return views.StatusOK(c, "order updated successfully")
+}
+
 func DeleteOrderItemFromOrder(c *fiber.Ctx) error {
 	order_id, err := uuid.Parse(c.Params("order_id"))
 	if err != nil {
