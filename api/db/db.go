@@ -43,5 +43,7 @@ func Connect() *gorm.DB {
 		log.Fatal("Failed to connect to the database:", err)
 	}
 
+	log.Println("Connected to the database!")
+
 	return db
 }
