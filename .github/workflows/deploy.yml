@@ -13,12 +13,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Debug Railway Token
+        run: echo "RAILWAY_TOKEN length: ${#RAILWAY_TOKEN}"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
       - name: Install Railway CLI
-        run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$RAILWAY_TOKEN" | railway login
+        run: curl -fsSL https://railway.app/install.sh | sh
 
       - name: Deploy to Railway
-        run: railway up
+        run: railway up --service my-service
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
