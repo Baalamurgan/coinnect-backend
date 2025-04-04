@@ -132,7 +132,7 @@ func UpdateCategory(c *fiber.Ctx) error {
 		return views.InvalidParams(c)
 	}
 
-	result := db.GetDB().Table("category").Where("id = ?", id).Updates(req)
+	result := db.GetDB().Table("categories").Where("id = ?", id).Updates(req)
 	if result.Error != nil {
 		return views.InternalServerError(c, result.Error)
 	} else if result.RowsAffected == 0 {
