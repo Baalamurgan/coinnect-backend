@@ -91,6 +91,7 @@ func CreateCategory(c *fiber.Ctx) error {
 	newCategory := new(models.Category)
 	newCategory.Name = req.Name
 	newCategory.Description = req.Description
+	newCategory.Slug = utils.GenerateCategorySlug(req.Description)
 	if req.ParentCategoryID == "" {
 		newCategory.ParentCategoryID = nil
 	} else {

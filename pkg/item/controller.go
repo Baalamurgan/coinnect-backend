@@ -146,7 +146,7 @@ func CreateItem(c *fiber.Ctx) error {
 	newItem.Sold = req.Sold
 	newItem.Price = req.Price
 	newItem.GST = req.GST
-	newItem.Slug = utils.GenerateSlug(req.Name)
+	newItem.Slug = utils.GenerateItemSlug(req.Name)
 
 	for _, itemReq := range req.Details {
 		newItem.Details = append(newItem.Details, models.Detail{

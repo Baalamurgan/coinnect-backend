@@ -7,6 +7,7 @@ type Category struct {
 	Name             string     `gorm:"not null" json:"name"`
 	Description      string     `gorm:"type:text" json:"description"`
 	ParentCategoryID *uuid.UUID `gorm:"type:uuid" json:"parent_category_id"` // Nullable to allow root categories
+	Slug             string     `gorm:"type:text" json:"slug"`
 	Items            []Item     `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"items"`
 	CreatedAt        int        `json:"created_at"`
 	UpdatedAt        int        `json:"updated_at"`
