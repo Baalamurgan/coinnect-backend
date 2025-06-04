@@ -13,6 +13,8 @@ type User struct {
 	State        string    `json:"state"`
 	Pin          string    `json:"pin"`
 	Password     string    `json:"-"`
+	Role         string    `json:"role"` // super_admin | admin | user
+	IsApproved   bool      `gorm:"default:false" json:"is_approved"`
 	CreatedAt    int       `json:"created_at"`
 	UpdatedAt    int       `json:"updated_at"`
 }

@@ -38,6 +38,7 @@ func Signup(c *fiber.Ctx) error {
 		AddressLine3: req.AddressLine3,
 		State:        req.State,
 		Pin:          req.Pin,
+		Role:         "user",
 	}
 
 	if err := db.GetDB().Model(&models.User{}).Create(&newUser).Error; err != nil {
@@ -137,4 +138,18 @@ func UpdateUser(c *fiber.Ctx) error {
 	}
 
 	return views.StatusOK(c, "user updated successfully")
+}
+
+func ApproveUser(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if currentUser.Role != models.RoleSuperAdmin {
+		return views.UnAuthorisedViewWithMessage(c, "not allowed")
+	}
+
+	result := db.GetDB().Model(&models.User{}).Where("id = ?", id).Update("is_approved", true)
+	if result.Error != nil {
+		return views.InternalServerError(c, result.Error)
+	}
+
+	return views.StatusOK(c, "User approved")
 }

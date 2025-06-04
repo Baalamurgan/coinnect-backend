@@ -24,6 +24,7 @@ func SetupRoutes(app *fiber.App) {
 	profileGroup.Post("/", auth.GetUser)
 	profileGroup.Post("/email", auth.GetUserByEmail)
 	profileGroup.Put("/update/:id", auth.UpdateUser)
+	profileGroup.Put("/approve/:id", auth.ApproveUser)
 
 	// Category
 	categoryGroup := v1.Group("/category")
